@@ -11,7 +11,7 @@ class AsyncParser:
         self.format_url = "https://s1.landingfolio.com/api/v1/inspiration/?offset={}"
         self.ua = UserAgent()
         self.headers = {'accept': '*/*', 'user-agent': self.ua.random}
-        self.connector = aiohttp.TCPConnector()
+        self.connector = aiohttp.TCPConnector(limit=10)
 
     def create_dir(self, name):
         if not os.path.exists(name):
@@ -53,7 +53,7 @@ class AsyncParser:
                         filename="all_data")
 
     async def create_tasks(self):
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=self.connector) as session:
             tasks = []
             landings = self.read_json()
             for landing in landings:
@@ -73,9 +73,11 @@ class AsyncParser:
                     tasks.append(task)
             await asyncio.gather(*tasks)
             print(f"Обрабртано лэндинггов {len(landings)}")
+            print(f"Выпало исключений {self.error_counter}")
 
     async def download_personal_info(self, sesion, url, landing_name, picture_type):
         async with sesion.get(url=url, headers=self.headers) as resopnse:
+            assert resopnse.status == 200
             picture = await resopnse.read()
             with open(f"data/{landing_name}/{picture_type}.png", "wb") as file:
                 file.write(picture)
@@ -84,8 +86,9 @@ class AsyncParser:
 
     def main(self):
         self.create_dir("data")
-        asyncio.run(self.download_jsons())
-        asyncio.run(self.create_tasks())
+        # asyncio.run(self.download_jsons())
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(self.create_tasks())
 
 
 if __name__ == "__main__":
