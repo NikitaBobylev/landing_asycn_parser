@@ -84,7 +84,7 @@ class AsyncParser:
 
     def main(self):
         self.create_dir("data")
-        # asyncio.run(self.download_jsons())
+        asyncio.run(self.download_jsons())
         asyncio.run(self.create_tasks())
 
 
